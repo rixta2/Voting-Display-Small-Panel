@@ -22,8 +22,8 @@ const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
 String websocket_server = SERVER;
-String teamName = FACTION_NAME;
-String wsPath = "/score_ws/" + teamName;
+String factionName = FACTION_NAME;
+String wsPath = "/score_ws/" + factionName;
 const uint16_t websocket_port = 80;
 
 
