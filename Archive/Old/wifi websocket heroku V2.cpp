@@ -18,8 +18,8 @@
   #define SERVER "Unknown"
 #endif
 
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+const char* ssid = "Gusmanor";
+const char* password = "Bigboygus";
 
 String websocket_server = SERVER;
 String factionName = FACTION_NAME;
