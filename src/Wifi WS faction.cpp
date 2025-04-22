@@ -23,10 +23,10 @@ const char* password = WIFI_PASSWORD;
 
 String websocket_server = SERVER;
 String factionName = FACTION_NAME;
-String wsPath = "/score_ws/" + factionName;
+String wsPath = "/score_ws/" + factionName + "/timed";
 const uint16_t websocket_port = 80;
 unsigned long lastLoop = 0;
-int currentDigits[4] = {-1, -1, -1, -1};  
+int currentDigits[4] = {-1, -1, -1, -1};  // -1 means nothing shown
 
 WebSocketsClient webSocket;
 String receivedScore = "";
@@ -44,7 +44,7 @@ CRGB leds2[NUM_LEDS];
 CRGB leds3[NUM_LEDS];
 CRGB leds4[NUM_LEDS];
 
-// 7-segment LED mapping (LEDs 0 and 13 not used in panel)
+// 7-segment LED mapping (LEDs 0 and 13 do not make up segments)
 const int segmentMap[7][4] = {
   { 1, 2, 3, 4 },   // Top left
   { 5, 6, 7, 8 },   // Top
@@ -69,58 +69,48 @@ const byte numbers[10][7] = {
 };
 
 void displayDigit(int digit, CRGB leds[]) {
-  if (digit >= 0 && digit <= 9) {
+    if (digit >= 0 && digit <= 9) {
       for (int segment = 0; segment < 7; segment++) {
-          if (numbers[digit][segment]) {
-              for (int i = 0; i < 4; i++) {
-                  leds[segmentMap[segment][i]] = LED_COLOR; // set in build flag
-              }
-          } else {
-              for (int i = 0; i < 4; i++) {
-                  leds[segmentMap[segment][i]] = CRGB::Black;
-              }
-          }
+        for (int i = 0; i < 4; i++) {
+          leds[segmentMap[segment][i]] = numbers[digit][segment] ? LED_COLOR : CRGB::Black;
+        }
       }
-  } else { // kills leading 0s
+    } else {
       for (int i = 0; i < NUM_LEDS; i++) {
-          leds[i] = CRGB::Black;
+        leds[i] = CRGB::Black;
       }
+    }
+
   }
 
-  FastLED.show();
-}
-
-void updateDisplay(String score) {
+  void updateDisplay(String score) {
     if (score.length() > 4) {
         score = score.substring(score.length() - 4);
     }
 
-    // Pad the score with leading zeros to make it 4 characters long
     while (score.length() < 4) {
         score = "0" + score;
     }
 
-    bool leadingZero = true; // Flag to track leading zeros
+    bool leadingZero = true;
 
     for (int i = 0; i < 4; i++) {
         int digit = score[i] - '0';
 
-        if (digit != 0 || i == 3) { // Display digit if it's non-zero or the last digit
+        if (digit != 0 || i == 3) {
             leadingZero = false;
         }
 
-        if (leadingZero) {
-            if (currentDigits[i] != -1) { // Only update if the digit has changed
-                displayDigit(-1, (i == 0) ? leds1 : (i == 1) ? leds2 : (i == 2) ? leds3 : leds4);
-                currentDigits[i] = -1; // Update the current digit
-            }
-        } else {
-            if (currentDigits[i] != digit) { // Only update if the digit has changed
-                displayDigit(digit, (i == 0) ? leds1 : (i == 1) ? leds2 : (i == 2) ? leds3 : leds4);
-                currentDigits[i] = digit; // Update the current digit
-            }
+        int displayDigitValue = leadingZero ? -1 : digit;
+
+        if (displayDigitValue != currentDigits[i]) {
+            currentDigits[i] = displayDigitValue;
+            CRGB* targetStrip = (i == 0) ? leds1 : (i == 1) ? leds2 : (i == 2) ? leds3 : leds4;
+            displayDigit(displayDigitValue, targetStrip);
         }
     }
+
+    FastLED.show();
 }
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
@@ -130,20 +120,32 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
             break;
 
         case WStype_TEXT: {
+            Serial.println("[DEBUG] Received raw WebSocket payload:");
+            for (size_t i = 0; i < length; i++) {
+                Serial.print((char)payload[i]);
+            }
+            Serial.println();
+
             receivedScore = String((char*)payload);
             Serial.print("[INFO] Received Score: ");
             Serial.println(receivedScore);
 
-            // Ensure valid 4-digit number
             int score = receivedScore.toInt();
             if (score >= 0 && score <= 9999) {  
                 updateDisplay(String(score));  
+            } else {
+                Serial.println("[WARNING] Invalid score received, ignoring...");
             }
             break;
         }
 
         case WStype_DISCONNECTED:
             Serial.println("[ERROR] Disconnected from WebSocket server!");
+            break;
+
+        default:
+            Serial.print("[DEBUG] Unhandled WebSocket event type: ");
+            Serial.println(type);
             break;
     }
 }
@@ -161,9 +163,9 @@ void connectWiFi() {
 void connectWebSocket() {
     Serial.println("[INFO] Connecting to WebSocket server...");
     webSocket.begin(websocket_server, websocket_port, wsPath);
-    webSocket.enableHeartbeat(15000, 3000, 2);
+    webSocket.enableHeartbeat(15000, 3000, 2); //is this necessary?
     webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(5000);
+    webSocket.setReconnectInterval(5000); //how does this work?
 }
 
 void setup() {
@@ -178,13 +180,12 @@ void setup() {
     FastLED.clear();
     FastLED.show();
 
-    connectWiFi();  // WiFi connection
+    connectWiFi();
     WiFi.setSleep(false);
-    connectWebSocket();  // WebSocket connection
+    connectWebSocket();
 }
 
 void loop() {
-
 
     webSocket.loop();
     
