@@ -46,8 +46,13 @@ CRGB leds2[NUM_LEDS];
 CRGB leds3[NUM_LEDS];
 CRGB leds4[NUM_LEDS];
 
+// CRGB leds[4][NUM_LEDS];
+
+// bool LED_REVERSE_ORDER = true;
+
 int previousScore = 0;
 
+// 7-segment LED mapping (LEDs 0 and 13 do not make up segments)
 const int segmentMap[7][4] = {
   { 1, 2, 3, 4 },   // Top left
   { 5, 6, 7, 8 },   // Top
@@ -87,14 +92,28 @@ void displayDigit(int digit, CRGB leds[]) {
   }
 
   void updateDisplay(int score_int) {
-    //Serial.print("Inside update display");
+    Serial.print("Inside update display");
     std::string score = std::to_string(score_int);
+    // if (score.length() < 4) {
+    //     score = score.substring(score.length() - 4);
+    // }
 
+    //while (score.length() < 4) {
+    //   score = "0" + score;
+    //}
+
+    //bool leadingZero = true;
+    //int diff =  4 - score.length();
     while (score.length() < 4) {
       score = ' ' + score; // Add a blank space to the right
     }
 
     for (size_t i = 0; i < score.length() ; i++) {
+        //int digit = score[i] - '0';
+
+        // if (digit != 0 || i == 3) {
+        //     leadingZero = false;
+        // }
         if(score[i] == ' ') {
           switch(i) {
             case 0:
@@ -121,13 +140,16 @@ void displayDigit(int digit, CRGB leds[]) {
           continue;
         }
         int displayDigitValue = score[i] - '0';
-        //Serial.print("Display digit value: ");
-        //Serial.println(displayDigitValue);
-        //Serial.print("score[i]: ");
-        //Serial.println(score[i]);
+        Serial.print("Display digit value: ");
+        Serial.println(displayDigitValue);
+        Serial.print("score[i]: ");
+        Serial.println(score[i]);
 
         currentDigits[i] = displayDigitValue;
+        //CRGB* targetStrip = (i == 0) ? leds4 : (i == 1) ? leds3 : (i == 2) ? leds2 : leds1;
 
+        //CRGB* targetStrip = (i == 0) ? leds4 : (i == 1) ? leds3 : (i == 2) ? leds2 : leds1;
+        
         switch(i) {
             case 0:
                 displayDigit(displayDigitValue, leds1);
@@ -143,6 +165,9 @@ void displayDigit(int digit, CRGB leds[]) {
                 break;
         }
         
+
+        //displayDigit(displayDigitValue, targetStrip);
+        
     }
 
     FastLED.show();
@@ -155,7 +180,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
             break;
 
         case WStype_TEXT: {
-            //Serial.println("[DEBUG] Received raw WebSocket payload:");
+            Serial.println("[DEBUG] Received raw WebSocket payload:");
             for (size_t i = 0; i < length; i++) {
                 Serial.print((char)payload[i]);
             }
@@ -167,6 +192,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 
             int score = receivedScore.toInt();
             if (score >= 0 && score <= 9999 && score != previousScore) {  
+                // int scoreTest = 53;
                 updateDisplay(score);  
                 previousScore = score;
                 Serial.print("[INFO] Updated display to score: ");
@@ -221,7 +247,7 @@ void setup() {
     FastLED.addLeds<WS2812B, PANEL2_PIN, GRB>(leds2, NUM_LEDS);
     FastLED.addLeds<WS2812B, PANEL3_PIN, GRB>(leds3, NUM_LEDS);
     FastLED.addLeds<WS2812B, PANEL4_PIN, GRB>(leds4, NUM_LEDS);
-    
+
     FastLED.setBrightness(BRIGHTNESS);
     FastLED.clear();
     FastLED.show();
@@ -242,7 +268,6 @@ void loop() {
             connectWiFi();
         }
     
-        // Check if WebSocket is still connected
         if (!webSocket.isConnected()) {
             Serial.println("[ERROR] Lost WebSocket connection! Attempting reconnect...");
             connectWebSocket();
