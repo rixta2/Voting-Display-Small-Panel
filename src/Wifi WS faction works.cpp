@@ -3,7 +3,7 @@
 #include <FastLED.h>
 #include <string>
 #include <iostream>
-
+#include <iostream>
 
 #ifndef WIFI_SSID
   #define WIFI_SSID "Unknown_SSID"
@@ -26,7 +26,7 @@ const char* password = WIFI_PASSWORD;
 
 String websocket_server = SERVER;
 String factionName = FACTION_NAME;
-String wsPath = "/score_ws/" + factionName + "/timed";
+String wsPath = "/score_ws/" + factionName;
 const uint16_t websocket_port = 80;
 unsigned long lastLoop = 0;
 int currentDigits[4] = {-1, -1, -1, -1};  // -1 means nothing shown
@@ -46,6 +46,10 @@ CRGB leds1[NUM_LEDS];
 CRGB leds2[NUM_LEDS];
 CRGB leds3[NUM_LEDS];
 CRGB leds4[NUM_LEDS];
+
+// CRGB leds[4][NUM_LEDS];
+
+// bool LED_REVERSE_ORDER = true;
 
 int previousScore = 0;
 
@@ -91,7 +95,7 @@ void displayDigit(int digit, CRGB leds[]) {
   void updateDisplay(int score_int) {
     Serial.print("Inside update display");
     std::string score = std::to_string(score_int);
-    // if (score.length() > 4) {
+    // if (score.length() < 4) {
     //     score = score.substring(score.length() - 4);
     // }
 
@@ -100,14 +104,42 @@ void displayDigit(int digit, CRGB leds[]) {
     //}
 
     //bool leadingZero = true;
+    //int diff =  4 - score.length();
+    while (score.length() < 4) {
+      score = ' ' + score; // Add a blank space to the right
+    }
 
-    for (size_t i = 0; i < score.length(); i++) {
+    for (size_t i = 0; i < score.length() ; i++) {
         //int digit = score[i] - '0';
 
         // if (digit != 0 || i == 3) {
         //     leadingZero = false;
         // }
-
+        if(score[i] == ' ') {
+          switch(i) {
+            case 0:
+              for (int a = 0; a < NUM_LEDS; a++) {
+                leds1[a] = CRGB::Black;
+              }
+                break;
+            case 1:
+            for (int a = 0; a < NUM_LEDS; a++) {
+              leds2[a] = CRGB::Black;
+            }
+              break;
+            case 2:
+            for (int a = 0; a < NUM_LEDS; a++) {
+              leds3[a] = CRGB::Black;
+            }
+              break;
+            case 3:
+            for (int a = 0; a < NUM_LEDS; a++) {
+              leds4[a] = CRGB::Black;
+            }
+              break;
+        }
+          continue;
+        }
         int displayDigitValue = score[i] - '0';
         Serial.print("Display digit value: ");
         Serial.println(displayDigitValue);
@@ -115,8 +147,27 @@ void displayDigit(int digit, CRGB leds[]) {
         Serial.println(score[i]);
 
         currentDigits[i] = displayDigitValue;
-        CRGB* targetStrip = (i == 0) ? leds1 : (i == 1) ? leds2 : (i == 2) ? leds3 : leds4;
-        displayDigit(displayDigitValue, targetStrip);
+        //CRGB* targetStrip = (i == 0) ? leds4 : (i == 1) ? leds3 : (i == 2) ? leds2 : leds1;
+
+        //CRGB* targetStrip = (i == 0) ? leds4 : (i == 1) ? leds3 : (i == 2) ? leds2 : leds1;
+        
+        switch(i) {
+            case 0:
+                displayDigit(displayDigitValue, leds1);
+                break;
+            case 1:
+                displayDigit(displayDigitValue, leds2);
+                break;
+            case 2:
+                displayDigit(displayDigitValue, leds3);
+                break;
+            case 3:
+                displayDigit(displayDigitValue, leds4);
+                break;
+        }
+        
+
+        //displayDigit(displayDigitValue, targetStrip);
         
     }
 
@@ -197,6 +248,11 @@ void setup() {
     FastLED.addLeds<WS2812B, PANEL2_PIN, GRB>(leds2, NUM_LEDS);
     FastLED.addLeds<WS2812B, PANEL3_PIN, GRB>(leds3, NUM_LEDS);
     FastLED.addLeds<WS2812B, PANEL4_PIN, GRB>(leds4, NUM_LEDS);
+
+    // FastLED.addLeds<WS2812B, PANEL1_PIN, GRB>(leds[0], NUM_LEDS);
+    // FastLED.addLeds<WS2812B, PANEL2_PIN, GRB>(leds[1], NUM_LEDS);
+    // FastLED.addLeds<WS2812B, PANEL3_PIN, GRB>(leds[2], NUM_LEDS);
+    // FastLED.addLeds<WS2812B, PANEL4_PIN, GRB>(leds[3], NUM_LEDS);
     
     FastLED.setBrightness(BRIGHTNESS);
     FastLED.clear();
