@@ -164,7 +164,12 @@ void connectWebSocket() {
     Serial.println("[INFO] Connecting to WebSocket server...");
     webSocket.begin(websocket_server, websocket_port, wsPath);
     webSocket.enableHeartbeat(15000, 3000, 2); //is this necessary?
-    webSocket.onEvent(webSocketEvent);
+    try {
+      webSocket.onEvent(webSocketEvent);
+    } catch (const std::exception& e) {
+        Serial.print("[ERROR] WebSocket event handler error: ");
+        Serial.println(e.what());
+    }
     webSocket.setReconnectInterval(5000); //how does this work?
 }
 
